@@ -3085,3 +3085,154 @@ body.cart-drawer-open {
 .cart-delete-btn:hover {
     background: #ffe1da;
 }
+
+
+/* Nexora Food - Cart Drawer Item Layout */
+.cart-drawer-items {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.cart-drawer-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 0;
+    border-bottom: 1px solid #edf0e9;
+}
+
+.cart-drawer-item-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #292929;
+}
+
+.cart-drawer-item-price {
+    color: #666;
+    font-size: 16px;
+}
+
+.cart-drawer-item-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.cart-quantity-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.cart-quantity-value {
+    min-width: 76px;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 16px;
+}
+
+.cart-quantity-btn,
+.cart-delete-btn {
+    min-height: 42px;
+    padding: 8px 13px;
+    border: 1px solid #d9dfd5;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background 0.2s ease;
+}
+
+.cart-quantity-btn {
+    background: #f5f7f3;
+    color: #35552B;
+}
+
+.cart-delete-btn {
+    background: #fff1ed;
+    color: #b42318;
+}
+
+
+/* Cart product layout */
+.cart-drawer-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px 0;
+    border-bottom: 1px solid #edf0e9;
+}
+
+.cart-drawer-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cart-drawer-item-info h3 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.4;
+}
+
+.cart-drawer-item-info p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.cart-drawer-item-quantity {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.cart-quantity-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.cart-quantity-value {
+    min-width: 76px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.cart-drawer-item-quantity strong {
+    color: #35552B;
+    font-size: 19px;
+    white-space: nowrap;
+}
+
+.cart-quantity-btn,
+.cart-delete-btn {
+    min-height: 42px;
+    padding: 8px 13px;
+    border: 1px solid #d9dfd5;
+    border-radius: 9px;
+    cursor: pointer;
+}
+
+.cart-quantity-btn {
+    background: #f5f7f3;
+    color: #35552B;
+}
+
+.cart-delete-btn {
+    background: #fff1ed;
+    color: #b42318;
+}
+
+@media (max-width: 480px) {
+    .cart-drawer-item-quantity {
+        gap: 8px;
+    }
+
+    .cart-quantity-value {
+        min-width: 60px;
+    }
+}
