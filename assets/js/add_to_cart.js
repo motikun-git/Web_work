@@ -1,9 +1,156 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const cartForms = document.querySelectorAll(
-        '.home-featured-cart-form'
-    );
+    const CART_FORM_SELECTOR = '.home-featured-cart-form';
+    const CART_ACTION_SELECTOR = '[data-cart-action]';
 
-    cartForms.forEach(function (form) {
+    const formatPrice = (amount) =>
+        '৳' + Number(amount || 0).toFixed(2);
+
+    function updateCartCounts(count) {
+        document.querySelectorAll(
+            '.header-cart-count, .floating-cart-count'
+        ).forEach(function (element) {
+            element.textContent = count;
+        });
+
+        const drawerCount = document.getElementById('drawerCartCount');
+
+        if (drawerCount) {
+            drawerCount.textContent = count;
+        }
+    }
+
+    function renderEmptyCart(container) {
+        const empty = document.createElement('div');
+        empty.className = 'cart-drawer-empty';
+
+        const icon = document.createElement('span');
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '🛒';
+
+        const heading = document.createElement('h3');
+        heading.textContent = 'Your cart is empty';
+
+        const message = document.createElement('p');
+        message.textContent = 'Add products to see them here.';
+
+        empty.append(icon, heading, message);
+        container.replaceChildren(empty);
+    }
+
+    function makeActionButton(label, action, productId, ariaLabel) {
+        const button = document.createElement('button');
+
+        button.type = 'button';
+        button.className =
+            action === 'delete' ? 'cart-delete-btn' : 'cart-quantity-btn';
+
+        button.textContent = label;
+        button.dataset.cartAction = action;
+        button.dataset.productId = productId;
+        button.setAttribute('aria-label', ariaLabel);
+
+        return button;
+    }
+
+    function renderCartItems(items) {
+        const container = document.getElementById('cartDrawerItems');
+
+        if (!container || !Array.isArray(items)) return;
+
+        if (items.length === 0) {
+            renderEmptyCart(container);
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        items.forEach(function (item) {
+            const row = document.createElement('div');
+            row.className = 'cart-drawer-item';
+
+            const info = document.createElement('div');
+            info.className = 'cart-drawer-item-info';
+
+            const name = document.createElement('h3');
+            name.textContent = item.name || 'Product';
+
+            const price = document.createElement('p');
+            price.textContent = formatPrice(item.price) + ' each';
+
+            info.append(name, price);
+
+            const details = document.createElement('div');
+            details.className = 'cart-drawer-item-quantity';
+
+            const controls = document.createElement('div');
+            controls.className = 'cart-quantity-controls';
+
+            const productId = String(item.product_id ?? '');
+
+            const minus = makeActionButton(
+                '−', 'decrease', productId, 'Decrease quantity'
+            );
+
+            const quantity = document.createElement('span');
+            quantity.className = 'cart-quantity-value';
+            quantity.textContent = 'Qty: ' + Number(item.quantity || 0);
+
+            const plus = makeActionButton(
+                '+', 'increase', productId, 'Increase quantity'
+            );
+
+            controls.append(minus, quantity, plus);
+
+            const lineTotal = document.createElement('strong');
+            lineTotal.textContent = formatPrice(item.lineTotal);
+
+            const remove = makeActionButton(
+                'Delete', 'delete', productId, 'Remove product'
+            );
+
+            details.append(controls, lineTotal, remove);
+            row.append(info, details);
+            fragment.appendChild(row);
+        });
+
+        container.replaceChildren(fragment);
+    }
+
+    function updateSubtotal(amount) {
+        const subtotal = document.getElementById('cartDrawerSubtotal');
+
+        if (subtotal) {
+            subtotal.textContent = formatPrice(amount);
+        }
+    }
+
+    function applyCartResponse(data) {
+        updateCartCounts(data.cartCount);
+        renderCartItems(data.items);
+        updateSubtotal(data.cartSubtotal);
+    }
+
+    async function postForm(url, body) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: body
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Cart request failed.');
+        }
+
+        return data;
+    }
+
+    // Add products without refreshing the page.
+    document.querySelectorAll(CART_FORM_SELECTOR).forEach(function (form) {
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
 
@@ -16,91 +163,12 @@ document.addEventListener('DOMContentLoaded', function () {
             button.textContent = 'Adding...';
 
             try {
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
+                const data = await postForm(
+                    form.action,
+                    new FormData(form)
+                );
 
-                const data = await response.json();
-
-                if (!response.ok || !data.success) {
-                    throw new Error(data.message || 'Could not add product.');
-                }
-
-                // Update header and floating cart counts.
-                document.querySelectorAll(
-                    '.header-cart-count, .floating-cart-count'
-                ).forEach(function (element) {
-                    element.textContent = data.cartCount;
-                });
-
-                // Update drawer item count.
-                const drawerCount = document.getElementById('drawerCartCount');
-
-                if (drawerCount) {
-                    drawerCount.textContent = data.cartCount;
-                }
-
-                // Update drawer product list.
-                const drawerItems = document.getElementById('cartDrawerItems');
-
-                if (drawerItems && Array.isArray(data.items)) {
-                    drawerItems.replaceChildren();
-
-                    if (data.items.length === 0) {
-                        drawerItems.innerHTML = `
-                            <div class="cart-drawer-empty">
-                                <span aria-hidden="true">🛒</span>
-                                <h3>Your cart is empty</h3>
-                                <p>Add products to see them here.</p>
-                            </div>
-                        `;
-                    } else {
-                        data.items.forEach(function (item) {
-                            const row = document.createElement('div');
-                            row.className = 'cart-drawer-item';
-
-                            const info = document.createElement('div');
-                            info.className = 'cart-drawer-item-info';
-
-                            const name = document.createElement('h3');
-                            name.textContent = item.name;
-
-                            const price = document.createElement('p');
-                            price.textContent =
-                                '৳' + Number(item.price).toFixed(2) + ' each';
-
-                            info.append(name, price);
-
-                            const quantity = document.createElement('div');
-                            quantity.className = 'cart-drawer-item-quantity';
-
-                            const qty = document.createElement('span');
-                            qty.textContent = 'Qty: ' + item.quantity;
-
-                            const total = document.createElement('strong');
-                            total.textContent =
-                                '৳' + Number(item.lineTotal).toFixed(2);
-
-                            quantity.append(qty, total);
-                            row.append(info, quantity);
-                            drawerItems.appendChild(row);
-                        });
-                    }
-                }
-
-                // Update subtotal.
-                const subtotal = document.getElementById('cartDrawerSubtotal');
-
-                if (subtotal) {
-                    subtotal.textContent =
-                        '৳' + Number(data.cartSubtotal).toFixed(2);
-                }
-
+                applyCartResponse(data);
                 button.textContent = 'Added ✓';
 
             } catch (error) {
@@ -115,150 +183,39 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
-});
 
+    // Update quantity or remove products without refreshing.
+    document.addEventListener('click', async function (event) {
+        const button = event.target.closest(CART_ACTION_SELECTOR);
 
+        if (!button || button.disabled) return;
 
-document.addEventListener('click', async function (event) {
-    const button = event.target.closest('[data-cart-action]');
+        const action = button.dataset.cartAction;
+        const productId = button.dataset.productId;
 
-    if (!button) return;
+        if (!action || !productId) return;
 
-    const action = button.dataset.cartAction;
-    const productId = button.dataset.productId;
+        button.disabled = true;
 
-    if (!action || !productId || button.disabled) return;
-
-    button.disabled = true;
-
-    try {
-        const response = await fetch('cart/update.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
-            },
-            body: new URLSearchParams({
+        try {
+            const body = new URLSearchParams({
                 action: action,
                 product_id: productId
-            })
-        });
+            });
 
-        const data = await response.json();
+            const data = await postForm('cart/update.php', body);
 
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || 'Cart update failed.');
-        }
+            applyCartResponse(data);
 
-        // Update cart count everywhere.
-        document.querySelectorAll(
-            '.header-cart-count, .floating-cart-count'
-        ).forEach(function (element) {
-            element.textContent = data.cartCount;
-        });
+        } catch (error) {
+            console.error('Cart update error:', error);
+            alert('Could not update cart. Please try again.');
 
-        // Update drawer item count.
-        const drawerCount = document.getElementById('drawerCartCount');
-
-        if (drawerCount) {
-            drawerCount.textContent = data.cartCount;
-        }
-
-        // Rebuild drawer product list safely.
-        const drawerItems = document.getElementById('cartDrawerItems');
-
-        if (drawerItems) {
-            drawerItems.replaceChildren();
-
-            if (data.items.length === 0) {
-                const empty = document.createElement('div');
-                empty.className = 'cart-drawer-empty';
-
-                const heading = document.createElement('h3');
-                heading.textContent = 'Your cart is empty';
-
-                const message = document.createElement('p');
-                message.textContent = 'Add products to see them here.';
-
-                empty.append(heading, message);
-                drawerItems.appendChild(empty);
-            } else {
-                data.items.forEach(function (item) {
-                    const row = document.createElement('div');
-                    row.className = 'cart-drawer-item';
-
-                    const info = document.createElement('div');
-                    info.className = 'cart-drawer-item-info';
-
-                    const name = document.createElement('h3');
-                    name.textContent = item.name;
-
-                    const price = document.createElement('p');
-                    price.textContent =
-                        '৳' + Number(item.price).toFixed(2) + ' each';
-
-                    info.append(name, price);
-
-                    const controls = document.createElement('div');
-                    controls.className = 'cart-drawer-item-quantity';
-
-                    const quantityControls = document.createElement('div');
-                    quantityControls.className = 'cart-quantity-controls';
-
-                    function makeButton(label, actionName, ariaLabel) {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'cart-quantity-btn';
-                        btn.textContent = label;
-                        btn.dataset.cartAction = actionName;
-                        btn.dataset.productId = item.product_id;
-                        btn.setAttribute('aria-label', ariaLabel);
-                        return btn;
-                    }
-
-                    quantityControls.append(
-                        makeButton('−', 'decrease', 'Decrease quantity'),
-                        Object.assign(document.createElement('span'), {
-                            textContent: item.quantity
-                        }),
-                        makeButton('+', 'increase', 'Increase quantity')
-                    );
-
-                    const lineTotal = document.createElement('strong');
-                    lineTotal.textContent =
-                        '৳' + Number(item.lineTotal).toFixed(2);
-
-                    const deleteButton = document.createElement('button');
-                    deleteButton.type = 'button';
-                    deleteButton.className = 'cart-delete-btn';
-                    deleteButton.dataset.cartAction = 'delete';
-                    deleteButton.dataset.productId = item.product_id;
-                    deleteButton.textContent = 'Delete';
-
-                    controls.append(
-                        quantityControls,
-                        lineTotal,
-                        deleteButton
-                    );
-
-                    row.append(info, controls);
-                    drawerItems.appendChild(row);
-                });
+        } finally {
+            // The button may have been removed during rendering.
+            if (button.isConnected) {
+                button.disabled = false;
             }
         }
-
-        // Update subtotal.
-        const subtotal = document.getElementById('cartDrawerSubtotal');
-
-        if (subtotal) {
-            subtotal.textContent =
-                '৳' + Number(data.cartSubtotal).toFixed(2);
-        }
-
-    } catch (error) {
-        console.error('Cart update error:', error);
-        alert('Could not update cart. Please try again.');
-    } finally {
-        button.disabled = false;
-    }
+    });
 });

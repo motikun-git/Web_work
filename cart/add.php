@@ -94,6 +94,7 @@ if ($isAjax) {
         $cartSubtotal += $price * $qty;
 
         $cartItems[] = [
+            'product_id' => (int) ($item['product_id'] ?? 0),
             'name' => (string) ($item['name'] ?? 'Product'),
             'price' => $price,
             'quantity' => $qty,
